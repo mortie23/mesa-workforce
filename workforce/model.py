@@ -1,122 +1,87 @@
 """
-Patient-Provider workforce model
+Patient-GPFellow workforce model
 """
 
 from mesa import Model
 from mesa.space import MultiGrid
 from mesa.datacollection import DataCollector
 
-from workforce.agents import Provider, Patient, GrassPatch
+from workforce.agents import GPFellow, Patient, Trainee
 from workforce.schedule import RandomActivationByBreed
 
 
-class PatientProvider(Model):
+class PatientGPFellow(Model):
     """
-    Patient-Provider Model
+    Patient-GPFellow Model
     """
 
     height = 30
     width = 30
 
-    initial_providers = 100
+    initial_gpfellows = 50
+    initial_trainees = 5
     initial_patients = 0
 
-    provider_reproduce = 0.04
     patient_reproduce = 0.0
-
-    patient_gain_from_food = 0
-
-    grass = False
-    grass_regrowth_time = 0
-    provider_gain_from_food = 4
+    gpfellow_trained_trainee = 0.05
 
     verbose = False  # Print-monitoring
 
     description = (
-        "A model for simulating patient and provider workforce ecosystem modelling."
+        "A model for simulating patient and gpfellow workforce ecosystem modelling."
     )
 
     def __init__(
         self,
         height=20,
         width=20,
-        initial_providers=100,
+        initial_gpfellows=50,
+        initial_traineess=5,
         initial_patients=0,
-        provider_reproduce=0.04,
         patient_reproduce=0.0,
-        patient_gain_from_food=0,
-        grass=False,
-        grass_regrowth_time=0,
-        provider_gain_from_food=4,
+        gpfellow_trained_trainee=0.05,
     ):
         """
-        Create a new Patient-Provider model with the given parameters.
+        Create a new Patient-GPFellow model with the given parameters.
 
         Args:
-            initial_providers: Number of provider to start with
+            initial_gpfellows: Number of gpfellow to start with
             initial_patients: Number of wolves to start with
-            provider_reproduce: Probability of each provider reproducing each step
             patient_reproduce: Probability of each patient reproducing each step
-            patient_gain_from_food: age a patient gains from eating a provider
-            grass: Whether to have the provider eat grass for age
-            grass_regrowth_time: How long it takes for a grass patch to regrow
-                                 once it is eaten
-            provider_gain_from_food: age provider gain from grass, if enabled.
         """
         super().__init__()
         # Set parameters
         self.height = height
         self.width = width
-        self.initial_providers = initial_providers
+        self.initial_gpfellows = initial_gpfellows
         self.initial_patients = initial_patients
-        self.provider_reproduce = provider_reproduce
         self.patient_reproduce = patient_reproduce
-        self.patient_gain_from_food = patient_gain_from_food
-        self.grass = grass
-        self.grass_regrowth_time = grass_regrowth_time
-        self.provider_gain_from_food = provider_gain_from_food
 
         self.schedule = RandomActivationByBreed(self)
         self.grid = MultiGrid(self.height, self.width, torus=True)
         self.datacollector = DataCollector(
             {
                 "Patients": lambda m: m.schedule.get_breed_count(Patient),
-                "Providers": lambda m: m.schedule.get_breed_count(Provider),
+                "GPFellows": lambda m: m.schedule.get_breed_count(GPFellow),
+                "Trainees": lambda m: m.schedule.get_breed_count(Trainee),
             }
         )
 
-        # Create provider:
-        for i in range(self.initial_providers):
+        # Initialise by creating gpfellows:
+        for i in range(self.initial_gpfellows):
             x = self.random.randrange(self.width)
             y = self.random.randrange(self.height)
-            age = self.random.randrange(2 * self.provider_gain_from_food)
-            provider = Provider(self.next_id(), (x, y), self, True, age)
-            self.grid.place_agent(provider, (x, y))
-            self.schedule.add(provider)
+            gpfellow = GPFellow(self.next_id(), (x, y), self, True)
+            self.grid.place_agent(gpfellow, (x, y))
+            self.schedule.add(gpfellow)
 
-        # Create wolves
-        for i in range(self.initial_patients):
+        # Initialise by creating trainees:
+        for i in range(self.initial_trainees):
             x = self.random.randrange(self.width)
             y = self.random.randrange(self.height)
-            age = self.random.randrange(2 * self.patient_gain_from_food)
-            patient = Patient(self.next_id(), (x, y), self, True, age)
-            self.grid.place_agent(patient, (x, y))
-            self.schedule.add(patient)
-
-        # Create grass patches
-        if self.grass:
-            for agent, x, y in self.grid.coord_iter():
-
-                fully_grown = self.random.choice([True, False])
-
-                if fully_grown:
-                    countdown = self.grass_regrowth_time
-                else:
-                    countdown = self.random.randrange(self.grass_regrowth_time)
-
-                patch = GrassPatch(self.next_id(), (x, y), self, fully_grown, countdown)
-                self.grid.place_agent(patch, (x, y))
-                self.schedule.add(patch)
+            trainee = Trainee(self.next_id(), (x, y), self, True)
+            self.grid.place_agent(trainee, (x, y))
+            self.schedule.add(trainee)
 
         self.running = True
         self.datacollector.collect(self)
@@ -130,20 +95,23 @@ class PatientProvider(Model):
                 [
                     self.schedule.time,
                     self.schedule.get_breed_count(Patient),
-                    self.schedule.get_breed_count(Provider),
+                    self.schedule.get_breed_count(GPFellow),
+                    self.schedule.get_breed_count(Trainees),
                 ]
             )
 
     def run_model(self, step_count=200):
 
         if self.verbose:
-            print("Initial number wolves: ", self.schedule.get_breed_count(Patient))
-            print("Initial number provider: ", self.schedule.get_breed_count(Provider))
+            print("Initial number patients: ", self.schedule.get_breed_count(Patient))
+            print("Initial number gpfellows: ", self.schedule.get_breed_count(GPFellow))
+            print("Initial number trainees: ", self.schedule.get_breed_count(Trainees))
 
         for i in range(step_count):
             self.step()
 
         if self.verbose:
             print("")
-            print("Final number wolves: ", self.schedule.get_breed_count(Patient))
-            print("Final number provider: ", self.schedule.get_breed_count(Provider))
+            print("Final number patients: ", self.schedule.get_breed_count(Patient))
+            print("Final number gpfellows: ", self.schedule.get_breed_count(GPFellow))
+            print("Final number trainees: ", self.schedule.get_breed_count(Trainees))

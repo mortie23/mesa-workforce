@@ -1,70 +1,103 @@
 from mesa import Agent
 from workforce.random_walk import RandomWalker
+import numpy
 
+# A function for generating a sex
+def randomSex():
+    return 'M' if (round(numpy.random.random()) == 1) else 'F'
 
-class Provider(RandomWalker):
+class GPFellow(RandomWalker):
     """
-    A provider that walks around, reproduces (asexually) and gets eaten by patients.
-
-    The init is the same as the RandomWalker.
+    A gpfellow that ages, and sometimes trains a trainee.
     """
-    age = None
-
-    def __init__(self, unique_id, pos, model, moore, age=None):
+    def __init__(self, unique_id, pos, model, moore):
         super().__init__(unique_id, pos, model, moore=moore)
-        self.age = age
+        self.age = round(numpy.random.normal(45, 10))
+        self.sex = randomSex()
 
     def step(self):
         """
-        A model step. Move, then eat grass and reproduce.
+        A model step: Age by one year
         """
         #self.random_move()
         inworkforce = True
-        # Age the provider
+        # Age the gpfellow
         self.age += 1
 
-        # Exit Workforce
-        if self.age > 50:
+        # Exit the workforce
+        if self.age > 65:
             self.model.grid._remove_agent(self.pos, self)
             self.model.schedule.remove(self)
             inworkforce = False
 
-        if inworkforce and self.random.random() < self.model.provider_reproduce:
-            trainee = Provider(
-                self.model.next_id(), self.pos, self.model, self.moore, 25
+        # Start training a new trainee
+        if inworkforce and self.random.random() < self.model.gpfellow_trained_trainee:
+            trainee = Trainee(
+                self.model.next_id(), self.pos, self.model, self.moore
             )
             self.model.grid.place_agent(trainee, self.pos)
             trainee.random_move()
             self.model.schedule.add(trainee)
 
+class Trainee(RandomWalker):
+    """
+    A trainee that ages, becomes a fellow.
+    """
+    def __init__(self, unique_id, pos, model, moore):
+        super().__init__(unique_id, pos, model, moore=moore)
+        self.age = round(numpy.random.normal(25, 2))
+        self.sex = randomSex()
+        self.yearsInTraining = 0
+
+    def step(self):
+        """
+        A model step: Age by one year
+        """
+        inworkforce = True
+        # Age the gpfellow
+        self.age += 1
+        self.yearsInTraining += 1
+
+        # Becomes a gpfellow
+        if self.yearsInTraining == 5:
+            # remove self
+            self.model.grid._remove_agent(self.pos, self)
+            self.model.schedule.remove(self)
+            inworkforce = False
+            # add gpfellow with my properties
+            newGPFellow = GPFellow(
+                self.model.next_id(), self.pos, self.model, self.moore
+            )
+            self.model.grid.place_agent(newGPFellow, self.pos)
+            self.model.schedule.add(newGPFellow)
+            inworkforce = False
+
 
 class Patient(RandomWalker):
     """
-    A patient that walks around, reproduces (asexually) and eats providers.
+    A patient that walks around, reproduces (asexually) and attends gpfellows.
     """
-
-    age = None
-
-    def __init__(self, unique_id, pos, model, moore, age=None):
+    def __init__(self, unique_id, pos, model, moore):
         super().__init__(unique_id, pos, model, moore=moore)
-        self.age = age
+        self.age = round(numpy.random.normal(30, 10))
+        self.sex = randomSex()
 
     def step(self):
         self.random_move()
         # Age the patient
         self.age += 1
 
-        # If there are providers present, attend one
+        # If there are gpfellows present, attend one
         x, y = self.pos
         this_cell = self.model.grid.get_cell_list_contents([self.pos])
-        provider = [obj for obj in this_cell if isinstance(obj, Provider)]
-        if len(provider) > 0:
-            provider_to_attend = self.random.choice(provider)
+        gpfellow = [obj for obj in this_cell if isinstance(obj, GPFellow)]
+        if len(gpfellow) > 0:
+            gpfellow_attended = self.random.choice(gpfellow)
             self.age += self.model.patient_gain_from_food
 
-            # Add to providers workload
-            #self.model.grid._remove_agent(self.pos, provider_to_attend)
-            #self.model.schedule.remove(provider_to_attend)
+            # Add to gpfellows workload
+            #self.model.grid._remove_agent(self.pos, gpfellow_attended)
+            #self.model.schedule.remove(gpfellow_attended)
 
         # Death or reproduction
         if self.age > 80:
@@ -78,31 +111,3 @@ class Patient(RandomWalker):
                 )
                 self.model.grid.place_agent(baby, baby.pos)
                 self.model.schedule.add(baby)
-
-
-class GrassPatch(Agent):
-    """
-    A patch of grass that grows at a fixed rate and it is eaten by provider
-    """
-
-    def __init__(self, unique_id, pos, model, fully_grown, countdown):
-        """
-        Creates a new patch of grass
-
-        Args:
-            grown: (boolean) Whether the patch of grass is fully grown or not
-            countdown: Time for the patch of grass to be fully grown again
-        """
-        super().__init__(unique_id, model)
-        self.fully_grown = fully_grown
-        self.countdown = countdown
-        self.pos = pos
-
-    def step(self):
-        if not self.fully_grown:
-            if self.countdown <= 0:
-                # Set as fully grown
-                self.fully_grown = True
-                self.countdown = self.model.grass_regrowth_time
-            else:
-                self.countdown -= 1

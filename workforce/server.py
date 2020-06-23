@@ -2,8 +2,8 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from mesa.visualization.UserParam import UserSettableParameter
 
-from workforce.agents import Patient, Provider, GrassPatch
-from workforce.model import PatientProvider
+from workforce.agents import Patient, GPFellow, Trainee
+from workforce.model import PatientGPFellow
 
 
 def workforce_portrayal(agent):
@@ -12,49 +12,39 @@ def workforce_portrayal(agent):
 
     portrayal = {}
 
-    if type(agent) is Provider:
+    if type(agent) is GPFellow:
         portrayal["Shape"] = "workforce/resources/dr.png"
-        # https://icons8.com/web-app/433/provider
-        portrayal["scale"] = 0.9
-        portrayal["Layer"] = 2
-        portrayal["Age"] = round(agent.age, 1)
+        portrayal["Layer"] = 1
+        portrayal["Age"] = agent.age
+        portrayal["Sex"] = agent.sex
+
+    if type(agent) is Trainee:
+        portrayal["Shape"] = "workforce/resources/trainee.png"
+        portrayal["Layer"] = 1
+        portrayal["Age"] = agent.age
+        portrayal["Sex"] = agent.sex
 
     elif type(agent) is Patient:
         portrayal["Shape"] = "workforce/resources/patient.png"
-        # https://icons8.com/web-app/36821/German-Shepherd
-        portrayal["scale"] = 0.9
-        portrayal["Layer"] = 2
-        portrayal["Age"] = round(agent.age, 1)
-
-    elif type(agent) is GrassPatch:
-        if agent.fully_grown:
-            portrayal["Color"] = ["#00FF00", "#00CC00", "#009900"]
-        else:
-            portrayal["Color"] = ["#84e184", "#adebad", "#d6f5d6"]
-        portrayal["Shape"] = "rect"
-        portrayal["Filled"] = "true"
-        portrayal["Layer"] = 0
-        portrayal["w"] = 1
-        portrayal["h"] = 1
+        portrayal["Layer"] = 1
+        portrayal["Age"] = agent.age
 
     return portrayal
 
 
 canvas_element = CanvasGrid(workforce_portrayal, 20, 20, 500, 500)
+
+# Define the Line chart elements
 chart_element = ChartModule(
-    [{"Label": "Patients", "Color": "#AA0000"}, {"Label": "Providers", "Color": "#666666"}]
+    [{"Label": "Patients", "Color": "#AA0000"}
+    , {"Label": "GPFellows", "Color": "#666666"}
+    , {"Label": "Trainees", "Color": "#32a885"}
+    ]
 )
 
 model_params = {
-    "grass": UserSettableParameter("checkbox", "Grass Enabled", False),
-    "grass_regrowth_time": UserSettableParameter(
-        "slider", "Grass Regrowth Time", 20, 1, 50
-    ),
-    "initial_providers": UserSettableParameter(
-        "slider", "Initial Provider Population", 100, 10, 300
-    ),
-    "provider_reproduce": UserSettableParameter(
-        "slider", "Provider Reproduction Rate", 0.04, 0.01, 1.0, 0.01
+    "initial_gpfellows": UserSettableParameter(
+        "slider", "Initial GPFellow Population", 100, 10, 300
     ),
     "initial_patients": UserSettableParameter(
         "slider", "Initial Patient Population", 50, 10, 300
@@ -68,15 +58,20 @@ model_params = {
         0.01,
         description="The rate at which patient agents reproduce.",
     ),
-    "patient_gain_from_food": UserSettableParameter(
-        "slider", "Patient Gain From Food Rate", 20, 1, 50
-    ),
-    "provider_gain_from_food": UserSettableParameter(
-        "slider", "Provider Gain From Food", 4, 1, 10
+    "gpfellow_trained_trainee": UserSettableParameter(
+        "slider", "Trainee enters", 
+        0.05,
+        0.01,
+        1.0,
+        0.01,
+        description="The rate at which trainees start with a GP Fellow",
     ),
 }
 
+# Server instance
 server = ModularServer(
-    PatientProvider, [canvas_element, chart_element], "Patient Provider Workforce", model_params
+    PatientGPFellow, [canvas_element, chart_element]
+    , "Patient GPFellow Workforce"
+    , model_params
 )
 server.port = 8521
