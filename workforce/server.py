@@ -14,20 +14,30 @@ def workforce_portrayal(agent):
 
     if type(agent) is GPFellow:
         portrayal["Shape"] = "workforce/resources/dr.png"
+        portrayal["I'm a"] = 'GP Fellow'
         portrayal["Layer"] = 1
         portrayal["Age"] = agent.age
         portrayal["Sex"] = agent.sex
+        portrayal["Nickname"] = agent.nickname
 
     if type(agent) is Trainee:
         portrayal["Shape"] = "workforce/resources/trainee.png"
+        portrayal["I'm a"] = 'Trainee'
         portrayal["Layer"] = 1
         portrayal["Age"] = agent.age
         portrayal["Sex"] = agent.sex
+        portrayal["Nickname"] = agent.nickname
+        portrayal["Years In Training"] = agent.yearsInTraining
+
 
     elif type(agent) is Patient:
         portrayal["Shape"] = "workforce/resources/patient.png"
+        portrayal["I'm a"] = 'Patient'
         portrayal["Layer"] = 1
         portrayal["Age"] = agent.age
+        portrayal["Sex"] = agent.sex
+        portrayal["Nickname"] = agent.nickname
+        portrayal["Attendances"] = agent.attendance_count
 
     return portrayal
 
@@ -44,27 +54,33 @@ chart_element = ChartModule(
 
 model_params = {
     "initial_gpfellows": UserSettableParameter(
-        "slider", "Initial GPFellow Population", 100, 10, 300
+        "slider", "Initial GPFellow Population (Headcount)", 5, 1, 300, 1,
+        description="Number of initial GP Fellows",
+    ),
+    "initial_trainees": UserSettableParameter(
+        "slider", "Initial Trainee Population (Headcount)", 1, 1, 300, 1,
+        description="Number of initial Trainees",
     ),
     "initial_patients": UserSettableParameter(
-        "slider", "Initial Patient Population", 50, 10, 300
+        "slider", "Initial Patient Population (Headcount)", 10, 0, 1000, 1,
+        description="Number of initial patients",
     ),
     "patient_reproduce": UserSettableParameter(
         "slider",
-        "Patient Reproduction Rate",
-        0.05,
-        0.01,
-        1.0,
-        0.01,
+        "Patient Reproduction Rate (Probability)", 0.02, 0.01, 0.1, 0.01,
         description="The rate at which patient agents reproduce.",
     ),
     "gpfellow_trained_trainee": UserSettableParameter(
-        "slider", "Trainee enters", 
-        0.05,
-        0.01,
-        1.0,
-        0.01,
+        "slider", "Trainee enters (Probability)",  0.0001, 0.0001, 0.0002, 0.00005,
         description="The rate at which trainees start with a GP Fellow",
+    ),
+    "gpfellow_retirement_age": UserSettableParameter(
+        "slider", "GP Retirement Age (Yrs)",65, 40, 85, 1,
+        description="",
+    ),
+    "trainee_train_period": UserSettableParameter(
+        "slider", "Trainee Train Period (Yrs)", 5, 1, 15, 1,
+        description="",
     ),
 }
 

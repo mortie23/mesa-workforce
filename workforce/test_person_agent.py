@@ -1,5 +1,5 @@
 """
-Testing the RandomWalker by having an ABM composed only of random walker
+Testing the PersonAgent by having an ABM composed only of random walker
 agents.
 """
 
@@ -8,10 +8,11 @@ from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 from mesa.visualization.TextVisualization import TextVisualization, TextGrid
 
-from workforce.random_walk import RandomWalker
+from workforce.person_agent import PersonAgent
+from workforce.person_properties import calcAge, calcSex, calcName
 
 
-class WalkerAgent(RandomWalker):
+class WalkerAgent(PersonAgent):
     """
     Agent which only walks around.
     """
@@ -46,7 +47,10 @@ class WalkerWorld(Model):
         for i in range(self.agent_count):
             x = self.random.randrange(self.width)
             y = self.random.randrange(self.height)
-            a = WalkerAgent(i, (x, y), self, True)
+            age = calcAge(40,10)
+            sex = calcSex()
+            nickname = calcName(sex)
+            a = WalkerAgent(i, (x, y), self, True, age, sex, nickname)
             self.schedule.add(a)
             self.grid.place_agent(a, (x, y))
 

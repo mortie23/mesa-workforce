@@ -8,7 +8,24 @@ from mesa.datacollection import DataCollector
 
 from workforce.agents import GPFellow, Patient, Trainee
 from workforce.schedule import RandomActivationByBreed
+from workforce.person_properties import calcAge, calcSex, calcName
 
+import numpy
+import logging
+import names
+
+# Create a logger for debugging
+logger = logging.getLogger('model')
+logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+fh = logging.FileHandler('workforce.log')
+fh.setLevel(logging.DEBUG)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(fh)
+logger.info('Running model.py')
 
 class PatientGPFellow(Model):
     """
@@ -22,24 +39,28 @@ class PatientGPFellow(Model):
     initial_trainees = 5
     initial_patients = 0
 
-    patient_reproduce = 0.0
+    patient_reproduce = 0.05
     gpfellow_trained_trainee = 0.05
+    gpfellow_retirement_age = 65
+    trainee_train_period = 5
 
     verbose = False  # Print-monitoring
 
     description = (
         "A model for simulating patient and gpfellow workforce ecosystem modelling."
     )
-
+    # initialise with parameters (non positional) with defaults
     def __init__(
         self,
         height=20,
         width=20,
         initial_gpfellows=50,
-        initial_traineess=5,
+        initial_trainees=5,
         initial_patients=0,
         patient_reproduce=0.0,
         gpfellow_trained_trainee=0.05,
+        gpfellow_retirement_age=65,
+        trainee_train_period=5,
     ):
         """
         Create a new Patient-GPFellow model with the given parameters.
@@ -55,7 +76,10 @@ class PatientGPFellow(Model):
         self.width = width
         self.initial_gpfellows = initial_gpfellows
         self.initial_patients = initial_patients
+        self.initial_trainees = initial_trainees
         self.patient_reproduce = patient_reproduce
+        self.gpfellow_retirement_age = gpfellow_retirement_age
+        self.trainee_train_period = trainee_train_period
 
         self.schedule = RandomActivationByBreed(self)
         self.grid = MultiGrid(self.height, self.width, torus=True)
@@ -71,7 +95,10 @@ class PatientGPFellow(Model):
         for i in range(self.initial_gpfellows):
             x = self.random.randrange(self.width)
             y = self.random.randrange(self.height)
-            gpfellow = GPFellow(self.next_id(), (x, y), self, True)
+            age = calcAge(45,5)
+            sex = calcSex()
+            nickname = calcName(sex)
+            gpfellow = GPFellow(self.next_id(), (x, y), self, True, age, sex, nickname)
             self.grid.place_agent(gpfellow, (x, y))
             self.schedule.add(gpfellow)
 
@@ -79,9 +106,23 @@ class PatientGPFellow(Model):
         for i in range(self.initial_trainees):
             x = self.random.randrange(self.width)
             y = self.random.randrange(self.height)
-            trainee = Trainee(self.next_id(), (x, y), self, True)
+            age = calcAge(25, 2)
+            sex = calcSex()
+            nickname = calcName(sex)
+            trainee = Trainee(self.next_id(), (x, y), self, True, age, sex, nickname)
             self.grid.place_agent(trainee, (x, y))
             self.schedule.add(trainee)
+
+        # Initialise by creating patients:
+        for i in range(self.initial_patients):
+            x = self.random.randrange(self.width)
+            y = self.random.randrange(self.height)
+            age = calcAge(25, 2)
+            sex = calcSex()
+            nickname = calcName(sex)
+            patient = Patient(self.next_id(), (x, y), self, True, age, sex, nickname)
+            self.grid.place_agent(patient, (x, y))
+            self.schedule.add(patient)
 
         self.running = True
         self.datacollector.collect(self)
